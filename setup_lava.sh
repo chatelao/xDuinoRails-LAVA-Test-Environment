@@ -43,7 +43,15 @@ make install
 cd ..
 
 echo "Installing other tools..."
-apt-get install -y stlink-tools
+apt-get install -y stlink-tools python3-pip
+
+echo "Installing picotool..."
+pip3 install picotool
+
+echo "Setting up udev rules for Pico..."
+echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="0003", MODE="0666"' > /etc/udev/rules.d/99-pico.rules
+udevadm control --reload-rules
+udevadm trigger
 
 # --- Configure Apache ---
 echo "Configuring Apache..."

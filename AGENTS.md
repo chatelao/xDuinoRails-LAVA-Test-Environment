@@ -31,17 +31,17 @@ Die Zielgeräte sind über USB-Hubs mit dem Host-Controller verbunden.
 1.  **`target-pico-1`**
     * **Board:** Raspberry Pi Pico
     * **Anschluss:** `/dev/ttyACM0` (für serielle Konsole)
-    * **Flash-Methode:** UF2 (Bootloader-Modus)
+    * **Flash-Methode:** UF2, SWD, JTAG
 
 2.  **`target-pico-2`**
     * **Board:** Raspberry Pi Pico
     * **Anschluss:** `/dev/ttyACM1` (für serielle Konsole)
-    * **Flash-Methode:** UF2 (Bootloader-Modus)
+    * **Flash-Methode:** UF2, SWD, JTAG
 
 3.  **`target-xiao-rp2040`**
     * **Board:** Seeed Studio XIAO RP2040
     * **Anschluss:** `/dev/ttyACM2` (für serielle Konsole)
-    * **Flash-Methode:** UF2 (Bootloader-Modus)
+    * **Flash-Methode:** UF2, SWD, JTAG
 
 4.  **`target-stm32-f446re`**
     * **Board:** ST Nucleo-F446RE
