@@ -7,11 +7,15 @@ This document provides a comprehensive guide to setting up and using a LAVA (Lin
 - [Hardware Setup](#hardware-setup)
   - [RP2040 Boards (Pico, XIAO)](#rp2040-boards-pico-xiao)
   - [STM32-F446RE](#stm32-f446re)
+  - [ESP32-WROOM](#esp32-wroom)
+  - [Arduino Mega](#arduino-mega)
 - [Software Setup](#software-setup)
 - [Firmware and Test Delivery](#firmware-and-test-delivery)
   - [Method 1: UF2 Flashing (Pico & XIAO)](#method-1-uf2-flashing-pico--xiao)
   - [Method 2: SWD Flashing (Pico & XIAO)](#method-2-swd-flashing-pico--xiao)
   - [Method 3: OpenOCD Flashing (STM32)](#method-3-openocd-flashing-stm32)
+  - [Method 4: Esptool Flashing (ESP32)](#method-4-esptool-flashing-esp32)
+  - [Method 5: Avrdude Flashing (Arduino Mega)](#method-5-avrdude-flashing-arduino-mega)
 - [Follow-up Prompts](#follow-up-prompts)
 
 ## Hardware Setup
