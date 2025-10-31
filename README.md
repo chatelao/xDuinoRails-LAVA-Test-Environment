@@ -1,46 +1,50 @@
-# LAVA Server on Raspberry Pi 3 for Pico and STM32 Testing
+# LAVA Server on Raspberry Pi 3 for Microcontroller Testing
 
-This document provides a comprehensive guide to setting up and using a LAVA (Linaro Automated Validation Architecture) server on a Raspberry Pi 3. This setup is specifically designed to control and test two Raspberry Pi Picos via SWD and an STM32-446RE via its built-in ST-Link V2.
+This document provides a comprehensive guide to setting up and using a LAVA (Linaro Automated Validation Architecture) server on a Raspberry Pi 3. This setup is specifically designed to control and test Raspberry Pi Picos, Seeed Studio XIAO RP2040s, and an ST Nucleo-F446RE.
 
 ## Table of Contents
 
 - [Hardware Setup](#hardware-setup)
-  - [Raspberry Pi Pico](#raspberry-pi-pico)
-  - [STM32-446RE](#stm32-446re)
+  - [RP2040 Boards (Pico, XIAO)](#rp2040-boards-pico-xiao)
+  - [STM32-F446RE](#stm32-f446re)
 - [Software Setup](#software-setup)
 - [Firmware and Test Delivery](#firmware-and-test-delivery)
-  - [Job Definition](#job-definition)
-  - [Test Definition](#test-definition)
+  - [Method 1: UF2 Flashing (Pico & XIAO)](#method-1-uf2-flashing-pico--xiao)
+  - [Method 2: SWD Flashing (Pico & XIAO)](#method-2-swd-flashing-pico--xiao)
+  - [Method 3: OpenOCD Flashing (STM32)](#method-3-openocd-flashing-stm32)
 - [Follow-up Prompts](#follow-up-prompts)
 
 ## Hardware Setup
 
-### Raspberry Pi Pico
+Connect all target devices to the Raspberry Pi 3 host via a powered USB hub.
 
-The Raspberry Pi Picos are controlled directly by the Raspberry Pi 3's GPIO pins using SWD.
+### RP2040 Boards (Pico, XIAO)
+
+The RP2040-based boards can be programmed using two methods: the simple UF2 drag-and-drop method over USB, or the more advanced SWD method for debugging.
+
+#### UF2 Connection
+-   Simply connect the Pico or XIAO board to the USB hub. The `setup_lava.sh` script installs `picotool` to automate putting the device into bootloader mode.
+
+#### SWD Connection
+For direct debugging, you can connect the boards to the Raspberry Pi 3's GPIO pins. Note that all SWD-connected devices share the same lines.
 
 **Wiring:**
 
-Connect the Raspberry Pi 3 to the target Picos using the following wiring. Note that both Picos share the same SWD lines.
+| RPi3 Pin     | Target Pico/XIAO Pin |
+| :----------- | :------------------- |
+| 22 (GPIO 25) | SWDIO                |
+| 23 (GPIO 11) | SWCLK                |
+| Any GND      | GND                  |
 
-| RPi3 Pin     | Target Pico 1 Pin | RPi3 Pin     | Target Pico 2 Pin |
-| :----------- | :---------------- | :----------- | :---------------- |
-| 22 (GPIO 25) | SWDIO             | 22 (GPIO 25) | SWDIO             |
-| 23 (GPIO 11) | SWCLK             | 23 (GPIO 11) | SWCLK             |
-| Any GND      | GND               | Any GND      | GND               |
+### STM32-F446RE
 
-**Note:** You will need a custom Raspberry Pi HAT to manage these connections cleanly.
+The STM32-F446RE is controlled via its built-in ST-Link v2 debugger.
 
-### STM32-446RE
-
-The STM32-446RE is controlled via its built-in ST-Link V2 debugger.
-
-1.  **Connection:**
-    *   Simply connect the STM32-446RE to the Raspberry Pi 3 using a USB cable.
+-   **Connection:** Connect the Nucleo board to the Raspberry Pi 3's USB hub using the USB port on the ST-Link end of the board.
 
 ## Software Setup
 
-The included `setup_lava.sh` script automates the installation of the LAVA server, dispatcher, and all necessary tools.
+The included `setup_lava.sh` script automates the installation of the LAVA server, dispatcher, and all necessary tools (`openocd`, `picotool`, `stlink-tools`).
 
 1.  **Run the script:**
     ```bash
@@ -48,50 +52,39 @@ The included `setup_lava.sh` script automates the installation of the LAVA serve
     ```
 
 2.  **Device-Type Configuration:**
-    *   After the script finishes, you will need to create custom device-types in the LAVA web interface for the Pico and STM32 boards.
+    *   After the script finishes, create custom device-types in the LAVA web interface for `pico`, `xiao-rp2040`, and `stm32-f446re`.
     *   Go to `http://<your-pi-ip-address>/` and log in.
-    *   Navigate to "Device-Types" and create new types for `pico` and `stm32-446re`.
-    *   You will need to define the commands for flashing and resetting the devices using `openocd` for the Pico and `st-flash` for the STM32.
+    *   In the device-type commands, use `picotool` for UF2 flashing, and `openocd` for SWD and STM32 flashing.
 
 ## Firmware and Test Delivery
 
-LAVA uses "jobs" to define a set of actions to be performed on a device. A job consists of a job definition (in YAML format) and one or more test definitions.
+LAVA uses YAML job definitions to deploy firmware and run tests.
 
-### OpenOCD Script
+### Method 1: UF2 Flashing (Pico & XIAO)
 
-You will need to create a custom OpenOCD script to program the Pico. Here's an example, which you can save as `openocd_pico.cfg`:
+This method is ideal for `.uf2` firmware files.
 
-```
-# OpenOCD script for Raspberry Pi Pico
-
-interface raspberrypi-swd.cfg
-transport select swd
-
-# Target configuration
-source [find target/rp2040.cfg]
-
-# Program the firmware
-program {$FIRMWARE} verify reset exit
-```
-
-### Job Definition
-
-Here's an example of a job definition for flashing and testing a Pico. This job assumes you have the `openocd_pico.cfg` script available on a web server.
+**Job Definition (UF2):**
+This job uses `picotool` to reboot the device into the bootloader and then deploys the firmware.
 
 ```yaml
 device_type: pico
-job_name: pico-blink-test
+job_name: pico-uf2-blink-test
 
 actions:
 - deploy:
-    to: tftp
+    to: host
     images:
       firmware:
-        url: http://<your-server>/path/to/blink.elf
-      openocd_script:
-        url: http://<your-server>/path/to/openocd_pico.cfg
+        url: http://<your-server>/path/to/blink.uf2
 - boot:
-    method: openocd
+    method: custom
+    commands: |
+      picotool reboot --bootrom
+      sleep 2
+      picotool load -f {firmware}
+      sleep 1
+      picotool reboot
 - test:
     definitions:
       - repository: http://<your-server>/path/to/test-repo.git
@@ -99,25 +92,80 @@ actions:
         path: pico-blink-test.yaml
 ```
 
-### Test Definition
+### Method 2: SWD Flashing (Pico & XIAO)
 
-A test definition describes the steps to be executed on the device. Here's an example of a test for the Pico blink example:
+This method uses OpenOCD to flash `.elf` files, which is useful for debugging.
 
+**OpenOCD Script (`openocd_rp2040.cfg`):**
+```
+# OpenOCD script for Raspberry Pi Pico / XIAO RP2040
+interface raspberrypi-swd.cfg
+transport select swd
+source [find target/rp2040.cfg]
+program {$FIRMWARE} verify reset exit
+```
+
+**Job Definition (SWD):**
 ```yaml
-metadata:
-  name: pico-blink-test
-  description: "Tests the Pico's onboard LED"
+device_type: pico
+job_name: pico-swd-debug-test
 
-run:
-  steps:
-    - "lava-test-case led-blink --result pass"
+actions:
+- deploy:
+    to: tftp
+    images:
+      firmware:
+        url: http://<your-server>/path/to/debug_build.elf
+      openocd_script:
+        url: http://<your-server>/path/to/openocd_rp2040.cfg
+- boot:
+    method: openocd
+- test:
+    definitions:
+      - repository: http://<your-server>/path/to/test-repo.git
+        from: git
+        path: pico-debug-test.yaml
+```
+
+### Method 3: OpenOCD Flashing (STM32)
+
+This method uses OpenOCD to flash the STM32 via its onboard ST-Link.
+
+**OpenOCD Script (`openocd_stm32.cfg`):**
+```
+# OpenOCD script for STM32-F446RE Nucleo
+source [find interface/stlink.cfg]
+transport select hla_swd
+source [find target/stm32f4x.cfg]
+program {$FIRMWARE} verify reset exit
+```
+
+**Job Definition (STM32):**
+```yaml
+device_type: stm32-f446re
+job_name: stm32-led-test
+
+actions:
+- deploy:
+    to: tftp
+    images:
+      firmware:
+        url: http://<your-server>/path/to/stm32_blink.elf
+      openocd_script:
+        url: http://<your-server>/path/to/openocd_stm32.cfg
+- boot:
+    method: openocd
+- test:
+    definitions:
+      - repository: http://<your-server>/path/to/test-repo.git
+        from: git
+        path: stm32-led-test.yaml
 ```
 
 ## Follow-up Prompts
 
 | Prompt                                                              | Description                                                                                                                              |
 | :------------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------- |
-| "Create a LAVA device-type template for the Raspberry Pi Pico."     | This would generate a complete device-type template file that can be imported into LAVA, including the necessary OpenOCD commands.        |
-| "Write a LAVA test definition for the STM32-446RE's user button."   | This would create a test definition that waits for a button press on the STM32 and reports the result back to LAVA.                         |
+| "Create a LAVA device-type template for UF2 flashing a Pico."       | This would generate a complete device-type template file that can be imported into LAVA, including the necessary `picotool` commands.      |
+| "Write a LAVA test definition for the STM32-F446RE's user button."  | This would create a test definition that waits for a button press on the STM32 and reports the result back to LAVA via the serial port.      |
 | "Develop a Python script to automatically submit LAVA jobs."        | This script would use the `lavacli` tool to submit jobs to the LAVA server, making it easier to integrate with other automation tools. |
-| "Design a custom Raspberry Pi HAT for the LAVA test environment."   | This would involve creating a hardware design for a HAT that provides clean and reliable connections for the Picos and STM32.            |
