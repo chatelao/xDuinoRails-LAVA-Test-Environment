@@ -43,13 +43,15 @@ make install
 cd ..
 
 echo "Installing other tools..."
-apt-get install -y stlink-tools python3-pip
+apt-get install -y stlink-tools python3-pip avrdude
 
-echo "Installing picotool..."
-pip3 install picotool
+echo "Installing flashing tools..."
+pip3 install picotool esptool
 
-echo "Setting up udev rules for Pico..."
+echo "Setting up udev rules..."
 echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="0003", MODE="0666"' > /etc/udev/rules.d/99-pico.rules
+echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="0666"' > /etc/udev/rules.d/99-esp32.rules
+echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="0042", MODE="0666"' > /etc/udev/rules.d/99-arduino-mega.rules
 udevadm control --reload-rules
 udevadm trigger
 

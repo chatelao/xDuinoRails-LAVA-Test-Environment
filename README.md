@@ -42,9 +42,21 @@ The STM32-F446RE is controlled via its built-in ST-Link v2 debugger.
 
 -   **Connection:** Connect the Nucleo board to the Raspberry Pi 3's USB hub using the USB port on the ST-Link end of the board.
 
+### ESP32-WROOM
+
+The ESP32-WROOM is flashed using `esptool.py`.
+
+-   **Connection:** Connect the ESP32 board to the Raspberry Pi 3's USB hub. The `setup_lava.sh` script adds a udev rule to ensure it is accessible at `/dev/ttyUSB0`.
+
+### Arduino Mega
+
+The Arduino Mega is flashed using `avrdude`.
+
+-   **Connection:** Connect the Arduino Mega to the Raspberry Pi 3's USB hub.
+
 ## Software Setup
 
-The included `setup_lava.sh` script automates the installation of the LAVA server, dispatcher, and all necessary tools (`openocd`, `picotool`, `stlink-tools`).
+The included `setup_lava.sh` script automates the installation of the LAVA server, dispatcher, and all necessary tools (`openocd`, `picotool`, `stlink-tools`, `esptool.py`, `avrdude`).
 
 1.  **Run the script:**
     ```bash
@@ -160,6 +172,58 @@ actions:
       - repository: http://<your-server>/path/to/test-repo.git
         from: git
         path: stm32-led-test.yaml
+```
+
+### Method 4: Esptool Flashing (ESP32)
+
+This method uses `esptool.py` to flash `.bin` files to the ESP32.
+
+**Job Definition (ESP32):**
+```yaml
+device_type: esp32-wroom
+job_name: esp32-blink-test
+
+actions:
+- deploy:
+    to: host
+    images:
+      firmware:
+        url: http://<your-server>/path/to/blink.bin
+- boot:
+    method: custom
+    commands: |
+      esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash -z 0x1000 {firmware}
+- test:
+    definitions:
+      - repository: http://<your-server>/path/to/test-repo.git
+        from: git
+        path: esp32-blink-test.yaml
+```
+
+### Method 5: Avrdude Flashing (Arduino Mega)
+
+This method uses `avrdude` to flash `.hex` files to the Arduino Mega.
+
+**Job Definition (Arduino Mega):**
+```yaml
+device_type: arduino-mega
+job_name: arduino-mega-blink-test
+
+actions:
+- deploy:
+    to: host
+    images:
+      firmware:
+        url: http://<your-server>/path/to/blink.hex
+- boot:
+    method: custom
+    commands: |
+      avrdude -c wiring -p atmega2560 -P /dev/ttyACM4 -b 115200 -D -U flash:w:{firmware}:i
+- test:
+    definitions:
+      - repository: http://<your-server>/path/to/test-repo.git
+        from: git
+        path: arduino-mega-blink-test.yaml
 ```
 
 ## Follow-up Prompts
