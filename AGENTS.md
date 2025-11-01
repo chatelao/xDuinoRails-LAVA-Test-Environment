@@ -45,8 +45,11 @@ Die Zielgeräte sind über USB-Hubs mit dem Host-Controller verbunden.
 
 4.  **`target-stm32-f446re`**
     * **Board:** ST Nucleo-F446RE
-    * **Anschluss:** `/dev/ttyACM3` (für ST-Link V2/V3 serielle Konsole)
-    * **Flash-Methode:** `openocd` (über ST-Link)
+    * **Anschluss:** `/dev/ttyACM3` (für serielle Konsole)
+    * **Flash-Methode:** `openocd` (über Raspberry Pi GPIO mit JTAG)
+
+---
+**Hinweis zu SWD/JTAG:** Die RP2040-Geräte (`target-pico-1`, `target-pico-2`) werden über dedizierte SWD-Ports am Raspberry Pi gesteuert, was paralleles Debugging ermöglicht. Das `target-stm32-f446re` wird über JTAG gesteuert. Alle Verbindungen sind im `README.md` im Detail beschrieben.
 
 5.  **`target-esp32-wroom-1`**
     * **Board:** ESP32-WROOM
