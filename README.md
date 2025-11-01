@@ -22,29 +22,28 @@ This document provides a comprehensive guide to setting up and using a LAVA (Lin
 
 Connect all target devices to the Raspberry Pi 3 host via a powered USB hub.
 
-### RP2040 Boards (Pico, XIAO)
+### Direct GPIO Control (HAT Interface)
 
-The RP2040-based boards can be programmed using two methods: the simple UF2 drag-and-drop method over USB, or the more advanced SWD method for debugging.
+For advanced debugging and flashing, a custom 26-pin HAT is used to connect the Raspberry Pi directly to the JTAG and SWD interfaces of the target devices. This approach bypasses the onboard debuggers (like ST-Link) and provides dedicated programming lines for each device.
 
-#### UF2 Connection
--   Simply connect the Pico or XIAO board to the USB hub. The `setup_lava.sh` script installs `picotool` to automate putting the device into bootloader mode.
+**HAT Pin Mapping (26-pin Interface):**
 
-#### SWD Connection
-For direct debugging, you can connect the boards to the Raspberry Pi 3's GPIO pins. Note that all SWD-connected devices share the same lines.
-
-**Wiring:**
-
-| RPi3 Pin     | Target Pico/XIAO Pin |
-| :----------- | :------------------- |
-| 22 (GPIO 25) | SWDIO                |
-| 23 (GPIO 11) | SWCLK                |
-| Any GND      | GND                  |
-
-### STM32-F446RE
-
-The STM32-F446RE is controlled via its built-in ST-Link v2 debugger.
-
--   **Connection:** Connect the Nucleo board to the Raspberry Pi 3's USB hub using the USB port on the ST-Link end of the board.
+| HAT Pin # | RPi Funktion | Signal Name | Zielgerät | Ziel Pin(s) |
+| :--- | :--- | :--- | :--- | :--- |
+| **_JTAG (STM32)_** | | | `target-stm32-f446re` | |
+| 7 | GPIO 4 | JTAG\_TCK | Nucleo-F446RE | PA14 |
+| 11 | GPIO 17 | JTAG\_TMS | Nucleo-F446RE | PA13 |
+| 12 | GPIO 18 | JTAG\_TDI | Nucleo-F446RE | PA15 |
+| 13 | GPIO 27 | JTAG\_TDO | Nucleo-F446RE | PB3 |
+| **_SWD Port 1_** | | | `target-pico-1` | |
+| 15 | GPIO 22 | SWD1\_CLK | RP2040-1 | SWCLK |
+| 16 | GPIO 23 | SWD1\_DIO | RP2040-1 | SWDIO |
+| **_SWD Port 2_** | | | `target-pico-2` | |
+| 18 | GPIO 24 | SWD2\_CLK | RP2040-2 | SWCLK |
+| 22 | GPIO 25 | SWD2\_DIO | RP2040-2 | SWDIO |
+| **_Strom & GND_** | | | Alle | |
+| 1 | 3V3 Power | +3.3V | (Optional) | |
+| 6 | Ground | GND | Alle | GND |
 
 ### ESP32-WROOM
 
@@ -112,19 +111,10 @@ actions:
 
 This method uses OpenOCD to flash `.elf` files, which is useful for debugging.
 
-**OpenOCD Script (`openocd_rp2040.cfg`):**
-```
-# OpenOCD script for Raspberry Pi Pico / XIAO RP2040
-interface raspberrypi-swd.cfg
-transport select swd
-source [find target/rp2040.cfg]
-program {$FIRMWARE} verify reset exit
-```
-
-**Job Definition (SWD):**
+**Job Definition (SWD on Port 1):**
 ```yaml
 device_type: pico
-job_name: pico-swd-debug-test
+job_name: pico-swd-port1-test
 
 actions:
 - deploy:
@@ -133,7 +123,7 @@ actions:
       firmware:
         url: http://<your-server>/path/to/debug_build.elf
       openocd_script:
-        url: http://<your-server>/path/to/openocd_rp2040.cfg
+        url: http://<your-server>/path/to/openocd_configs/pico_swd1.cfg
 - boot:
     method: openocd
 - test:
@@ -143,23 +133,14 @@ actions:
         path: pico-debug-test.yaml
 ```
 
-### Method 3: OpenOCD Flashing (STM32)
+### Method 3: OpenOCD Flashing (STM32 via JTAG)
 
-This method uses OpenOCD to flash the STM32 via its onboard ST-Link.
+This method uses OpenOCD and the Raspberry Pi's GPIO pins to flash the STM32 via JTAG, which is ideal for boundary scan testing.
 
-**OpenOCD Script (`openocd_stm32.cfg`):**
-```
-# OpenOCD script for STM32-F446RE Nucleo
-source [find interface/stlink.cfg]
-transport select hla_swd
-source [find target/stm32f4x.cfg]
-program {$FIRMWARE} verify reset exit
-```
-
-**Job Definition (STM32):**
+**Job Definition (STM32 JTAG):**
 ```yaml
 device_type: stm32-f446re
-job_name: stm32-led-test
+job_name: stm32-jtag-led-test
 
 actions:
 - deploy:
@@ -168,7 +149,7 @@ actions:
       firmware:
         url: http://<your-server>/path/to/stm32_blink.elf
       openocd_script:
-        url: http://<your-server>/path/to/openocd_stm32.cfg
+        url: http://<your-server>/path/to/openocd_configs/stm32_jtag.cfg
 - boot:
     method: openocd
 - test:
